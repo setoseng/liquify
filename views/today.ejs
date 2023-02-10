@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <% include templates/head.ejs%>
+    <title>Liquify</title>
+</head>
+  <body>
+  <% include templates/header.ejs%>
+    <div id="today-margin">
+
+      <!-- HEADER -->
+      <div class="container">
+        <div class="row">
+          <div class="col-md-12">
+            <h1 class=" today text-center"> Track your water intake
+              <br /> <span class="date datetime"></span>
+            </h1>
+          <!-- //PROGRESS CIRCLE -->
+              <div
+                id="circle">
+              </div>
+          <!-- //1 CUP = 8OZ -->
+              <div class="eightoz">
+                <div>
+                      1 cup = 8 oz
+                </div>
+          <!-- PERCENTAGE/CUPS  -->
+            </div>
+            <div class="row">
+              <div class="data col-md-6">
+                <div class=" cupspercent"></div>
+                  <span>%</span>
+              </div>
+              <div class="data col-md-6">
+                <div class=" cupscount"></div>
+                   <span>CUPS</span>
+               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <% include templates/footer.ejs%>
+    <script>
+      var datetime = null,
+              date = null;
+
+      var update = function () {
+          date = moment(new Date());
+          datetime.html(date.format('dddd, MMMM Do YYYY, h:mm:ss a'));
+      };
+
+      $(document).ready(function(){
+
+        (function(){
+          var offset = moment().utcOffset();
+          var api_url = '/api/synctime:'+offset;
+             axios.put(api_url)
+                .then(function (response) {
+                  console.log(response.data);
+
+                 })
+                 .catch(function (error) {
+                   console.error(error);
+                 });
+             })();
+
+        try {
+          var bar = new ProgressBar.Circle(circle, {
+            color: '#aaa',
+            // This has to be the same size as the maximum width to
+            // prevent clipping
+            strokeWidth: 4,
+            trailWidth: 1,
+            easing: 'easeInOut',
+            duration: 1400,
+            text: {
+              autoStyleContainer: false
+            },
+            from: { color: '#5ce2ed', width: 5 },
+            to: { color: '#5ce2ed', width: 4 },
+            // Set default step function for all animate calls
+            step: function(state, circle) {
+              circle.path.setAttribute('stroke', state.color);
+              circle.path.setAttribute('stroke-width', state.width);
+              circle.setText("+");
+            }
+          });
+          bar.text.style.fontFamily = '"Raleway", Helvetica, sans-serif';
+          bar.text.style.fontSize = '2rem';
+
+          bar.animate(0);  // Number from 0.0 to 1.0s
+        } catch (error) {
+          console.error(error);
+        }
+
+
+        datetime = $('.datetime');
+        update();
+        setInterval(update, 1000);
+
+
+        let thedata = <%= data.value%>
+        let percentdata = 0;
+        if(thedata <= 8){
+          percentdata = Math.floor((thedata/8) * 100);
+        } else{
+          thedata = 8;
+          percentdata = 100;
+        }
+
+        bar.animate(thedata/8);
+
+        var clock = $('.cupscount').FlipClock(thedata, {
+          clockFace: 'Counter',
+
+        });
+        var clockone = $('.cupspercent').FlipClock(percentdata, {
+          clockFace: 'Counter',
+          minimumDigits:3
+
+        });
+
+        $('.progressbar-text').click(function(){
+          var api_url = '/api/drinkup';
+          axios.put(api_url)
+          .then(function(response){
+            if(response.data.value <9){
+              clock.increment();
+
+              let toincrement = (Math.floor((response.data.value/8) * 100) - Math.floor(((response.data.value-1)/8) * 100));
+
+              for(let i =0;i<toincrement;i++){
+                clockone.increment();
+              }
+              bar.animate(response.data.value/8);
+            }
+          })
+        });
+      });
+
+    </script>
+  </body>
+</html>

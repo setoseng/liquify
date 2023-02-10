@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <% include templates/head.ejs%>
+    <title>Liquify</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.1.4/Chart.min.js"></script>
+    <link rel="manifest" href="/manifest.json">
+    <script src="https://cdn.onesignal.com/sdks/OneSignalSDK.js" async></script>
+  </head>
+  <body>
+    <% include templates/header.ejs%>
+    <div class="container">
+    <div class="row" id="status-margin">
+      <div class="col-md-10 col-md-offset-1">
+
+    <!--<div id="chartContainer" style="height: 300px; width: 100%;"></div>-->
+    <div class="chartcontainer">
+      <h1 class="status text-center">Weekly Report</h1>
+      <div>
+        <canvas id="myChart"></canvas>
+
+      </div>
+    </div>
+
+</div>
+<button class="btn btn-danger subscribe-link" style="position:absolute; right:1em; bottom:1em;">Remind Me to drink water!</button>
+<button class="btn btn-danger unsubscribe-link" data-toggle="modal" data-target="#myModal" style="position:absolute; right:1em; bottom:1em;">Stop Remind Me to drink water!</button>
+
+<div class="modal fade " id="myModal" tabindex="-1" role="dialog">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title">Liquify</h4>
+      </div>
+      <div class="modal-body">
+        <p>We will stop bothering you.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+      </div>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+    <% include templates/footer.ejs%>
+</div>
+  </div>
+    <script>
+    var d;
+    $(document).ready(function(){
+
+      (function(){
+        var offset = moment().utcOffset();
+        var api_url = '/api/synctime:'+offset;
+           axios.put(api_url)
+              .then(function (response) {
+                console.log(response.data);
+
+               })
+               .catch(function (error) {
+                 console.error(error);
+               });
+           })();
+
+      var initData = JSON.parse('<%-JSON.stringify(data)%>');
+      d = initData;
+      var xdata = [initData[6][0],initData[5][0],initData[4][0],initData[3][0],initData[2][0],initData[1][0],initData[0][0]];
+      var ydata = [initData[6][1],initData[5][1],initData[4][1],initData[3][1],initData[2][1],initData[1][1],initData[0][1]];
+      var ctx = document.getElementById('myChart').getContext('2d');
+      var myChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: xdata,
+          //labels: ["1","2","3","4"],
+          datasets: [{
+            label: 'Number of Cup',
+            data: ydata,
+            //data: [1,2,3,4],
+            backgroundColor: "rgba(92,226,237,0.6)"
+          }]
+        },
+        options: {
+            scales: {
+                yAxes: [{
+                    ticks: {
+                        beginAtZero:true
+                    },
+                    gridLines: {
+                      display: false,
+                      color: "white"
+                    }
+                }],
+                xAxes: [{
+                    gridLines: {
+                      display: false,
+                      color: "white"
+                    }
+                }],
+
+            }
+        }
+      });
+
+        Chart.defaults.global.defaultFontColor = 'white';
+    });
+
+    var onesig_userid = "";
+
+    var OneSignal = window.OneSignal || [];
+    OneSignal.push(["init", {
+      appId: "27089081-c27e-454a-a2e0-975db773550d",
+      autoRegister: false,
+      notifyButton: {
+        enable: false/* Set to false to hide */
+      },
+      promptOptions: {
+          /* Change bold title, limited to 30 characters */
+          siteName: 'Liquify',
+          /* Subtitle, limited to 90 characters */
+          actionMessage: "Would you like us to remind you to stay hydrated?",
+          /* Example notification title */
+          exampleNotificationTitle: 'Liquify',
+          /* Example notification message */
+          exampleNotificationMessage: 'Stay thirsty my friend.',
+          /* Text below example notification, limited to 50 characters */
+          exampleNotificationCaption: 'You can opt-out anytime',
+          /* Accept button text, limited to 15 characters */
+          acceptButtonText: "ALLOW",
+          /* Cancel button text, limited to 15 characters */
+          cancelButtonText: "NO THANKS"
+      },
+      welcomeNotification: {
+        disable: true
+      }
+    }]);
+
+    OneSignal.push(function() {
+     /* These examples are all valid */
+     OneSignal.getUserId(function(userId) {
+       onesig_userid= userId;
+       // (Output) OneSignal User ID: 270a35cd-4dda-4b3f-b04e-41d7463a2316
+     });
+
+     // OneSignal.getUserId().then(function(userId) {
+     //   console.log("OneSignal User ID:", userId);
+     //   // (Output) OneSignal User ID: 270a35cd-4dda-4b3f-b04e-41d7463a2316
+     // });
+   });
+    function subscribe() {
+      OneSignal.push(function() {
+        OneSignal.registerForPushNotifications({
+          modalPrompt: true
+        });
+      })
+    }
+
+    function unsubscribe(){
+      OneSignal.push(["setSubscription", false]);
+    }
+
+
+
+    OneSignal.push(function() {
+        // If we're on an unsupported browser, do nothing
+        if (!OneSignal.isPushNotificationsSupported()) {
+            return;
+        }
+        OneSignal.isPushNotificationsEnabled(function(isEnabled) {
+            if (isEnabled) {
+                // The user is subscribed to notifications
+                // Don't show anything
+                console.log("subscribed");
+                $('.unsubscribe-link').show();
+                $('.subscribe-link').hide();
+
+            } else {
+                console.log("not subscribed");
+                $('.unsubscribe-link').hide();
+                $('.subscribe-link').show();
+
+
+            }
+        });
+
+    });
+
+    $(".unsubscribe-link").click(function(){
+      unsubscribe();
+      var api_url = '/api/adddevice'+onesig_userid+'/no';
+         axios.put(api_url)
+            .then(function (response) {
+              console.log(response.data);
+
+             })
+             .catch(function (error) {
+               console.error(error);
+             });
+    });
+
+    $(".subscribe-link").click(function(){
+      subscribe();
+      var api_url = '/api/adddevice'+onesig_userid+'/yes';
+         axios.put(api_url)
+            .then(function (response) {
+              console.log(response.data);
+
+             })
+             .catch(function (error) {
+               console.error(error);
+             });
+    });
+
+    OneSignal.push(function() {
+     // Occurs when the user's subscription changes to a new value.
+     OneSignal.on('subscriptionChange', function (isSubscribed) {
+       console.log(onesig_userid+" subscription state is now:", isSubscribed);
+
+       if(isSubscribed){
+         $('.unsubscribe-link').show();
+         $('.subscribe-link').hide();
+       }else{
+         $('.unsubscribe-link').hide();
+         $('.subscribe-link').show();
+       }
+
+     });
+    });
+    </script>
+  </body>
+</html>
